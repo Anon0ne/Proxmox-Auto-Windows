@@ -341,7 +341,8 @@ function Add-TomlKeys($Lines, $Table, [string]$Prefix, [bool]$Raw, [string]$Styl
 }
 
 function Get-Item2($Table, [string]$Key) {
-    if ($Key -and $Table -is [Collections.IDictionary] -and $Table.Contains($Key)) { return $Table[$Key] }
+    # leading comma: keep a one-element array an array instead of letting PowerShell unroll it
+    if ($Key -and $Table -is [Collections.IDictionary] -and $Table.Contains($Key)) { return , $Table[$Key] }
     return $null
 }
 
