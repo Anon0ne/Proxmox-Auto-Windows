@@ -1,0 +1,5 @@
+# Build outputs: ISOs and generated answer/config files (may contain password hashes)
+*.iso
+*.answer.toml
+*.config.json
+answer.toml

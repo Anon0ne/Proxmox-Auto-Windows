@@ -1,0 +1,33 @@
+{
+  "_comment": "Keys starting with _ are ignored. Use kebab-case; the script converts to snake_case for 8.2/8.3 ISOs.",
+  "global": {
+    "fqdn": "pve01.example.lan",
+    "mailto": "admin@example.lan",
+    "timezone": "America/New_York",
+    "keyboard": "en-us",
+    "country": "us",
+    "root-password": "CHANGE-ME-please",
+    "_root-password": "Plain text here is hashed to root-password-hashed automatically on 8.3+ ISOs.",
+    "root-ssh-keys": [],
+    "reboot-on-error": false
+  },
+  "network": {
+    "source": "from-answer",
+    "cidr": "192.168.1.50/24",
+    "gateway": "192.168.1.1",
+    "dns": "1.1.1.1",
+    "filter": {
+      "ID_NET_NAME_MAC": "*aabbccddeeff"
+    },
+    "_dhcp": "For DHCP instead, keep only: \"source\": \"from-dhcp\""
+  },
+  "disk-setup": {
+    "filesystem": "zfs",
+    "zfs": {
+      "raid": "raid1",
+      "ashift": 12
+    },
+    "disk-list": ["sda", "sdb"],
+    "_disks": "Or replace disk-list with a udev filter, e.g. \"filter\": { \"ID_MODEL\": \"Samsung*\" }"
+  }
+}
