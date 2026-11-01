@@ -57,6 +57,7 @@ filesystem and target disks. It writes:
 | `-FirstBootScript setup.sh` | run a script once on first boot (8.3+, max 1 MiB, needs a shebang) |
 | `-AnswerOnly` | only generate the answer file |
 | `-PlainPassword` | keep the root password in plaintext instead of hashing it |
+| `-Headless` | power off after a successful install instead of rebooting (8.4+); see [Headless machines](#headless-machines) |
 | `-KeyStyle Kebab\|Snake` | override key spelling (auto: snake_case before 8.4, kebab-case from 8.4) |
 | `-Backend Docker\|WSL`, `-WslDistro` | choose where xorriso runs |
 | `-Force` | overwrite existing output files |
@@ -73,6 +74,9 @@ works. Write keys in kebab-case. Keys that start with `_` are treated as comment
 - **Disks**: `"disk-list": ["sda"]` uses Linux names on the *target* machine (`sda`, `nvme0n1`).
   Or select by udev property: `"filter": { "ID_SERIAL": "Samsung_SSD_*" }`. Every disk that
   matches gets wiped.
+  **Prefer a filter over `sda`.** The USB stick you boot from can itself show up as `sda`, and
+  the install then fails. For a single internal SATA drive, use `"filter": { "ID_BUS": "ata" }`,
+  which never matches USB devices.
 - **NIC for a static IP**: match by MAC with `"filter": { "ID_NET_NAME_MAC": "*aabbccddeeff" }`
   (lowercase, no colons), or by name with `"filter": { "ID_NET_NAME": "eno1" }`.
 - **Unknown disk or NIC names**: boot the stock ISO, choose *Advanced Options → Install Proxmox VE
@@ -92,6 +96,24 @@ DHCP vs. static rules, disk count for the RAID level, and features your ISO vers
 On boot the **Automated Installation** menu entry is selected by default and starts after a
 short countdown. It **erases the configured disks without asking**. Label the USB stick, and
 don't leave it plugged into a machine that boots from USB.
+
+## Headless machines
+
+Without a screen you can't see the installer, so build with `-Headless`:
+
+```powershell
+.\New-ProxmoxAutoIso.ps1 -IsoPath .\proxmox-ve.iso -Config .\pve01.json -Headless
+```
+
+1. Boot the stick. The installer gets a DHCP address and answers ping, but it has no SSH or web GUI.
+2. **The machine powers itself off** = the install succeeded. Remove the stick and power it on.
+   The web GUI appears at `https://<ip>:8006` about a minute later. With DHCP, the installed
+   system keeps the address the installer was given.
+3. **Still on after ~15 minutes**, answering ping but refusing port 22 and 8006 = the installer
+   stopped on an error. The most common cause is the disk choice (see *Disks* above).
+
+Without `-Headless` the machine reboots after installing. If the stick is still the first boot
+device, it reinstalls again and again.
 
 ## Troubleshooting
 
@@ -126,4 +148,8 @@ Checked with Proxmox VE 9.2-1 against the official `proxmox-auto-install-assista
   - the only differences are the boot catalog's position and the total size, because the
     official tool appends one session per file and this script appends one session in total.
 
-Not yet tested: booting the result on real hardware, and 8.x ISOs (snake_case keys).
+On real hardware: a headless PC (one SATA drive, DHCP) installed in about 3 minutes from a Rufus
+DD-mode stick with `-Headless` and `filter.ID_BUS = "ata"`. It powered off, then booted to the
+Proxmox VE 9.2 web GUI.
+
+Not yet tested: 8.x ISOs (snake_case keys).

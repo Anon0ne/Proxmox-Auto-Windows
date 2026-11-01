@@ -51,6 +51,11 @@
 .PARAMETER PlainPassword
     Keep a plaintext root-password instead of hashing it.
 
+.PARAMETER Headless
+    For machines without a screen (8.4+ ISOs): power off after a successful install instead
+    of rebooting, so the box can't boot the USB stick again and reinstall in a loop.
+    Powered off = success; still on (answering ping, nothing on port 22/8006) = stopped on an error.
+
 .PARAMETER Force
     Overwrite the output files if they exist.
 
@@ -73,6 +78,7 @@ param(
     [ValidateSet('Auto', 'Kebab', 'Snake')][string]$KeyStyle = 'Auto',
     [switch]$AnswerOnly,
     [switch]$PlainPassword,
+    [switch]$Headless,
     [switch]$Force
 )
 
@@ -601,6 +607,7 @@ try {
     $savedConfig = $null
     if ($AnswerFile) {
         Write-Step "Using answer file $AnswerFile as-is"
+        if ($Headless) { Write-Warning '-Headless is ignored with -AnswerFile; add reboot-mode = "power-off" to [global] yourself.' }
         $toml = [IO.File]::ReadAllText((Resolve-Path -LiteralPath $AnswerFile).ProviderPath)
         foreach ($s in '[global]', '[network]', '[disk-setup]') {
             if ($toml -notmatch [regex]::Escape($s)) { throw "Answer file has no $s section." }
@@ -625,6 +632,11 @@ try {
         }
 
         $g = Get-Item2 $model 'global'
+        if ($Headless) {
+            if ($ver -lt [version]'8.4') { throw '-Headless needs an 8.4+ ISO (reboot-mode = "power-off").' }
+            $g['reboot-mode'] = 'power-off'
+            $g['reboot-on-error'] = $false
+        }
         $plain = Get-Item2 $g 'root-password'
         if ($plain -and -not $PlainPassword -and $ver -ge [version]'8.3') {
             Write-Step 'Hashing root password (SHA-512 crypt)'
@@ -705,6 +717,10 @@ try {
     Write-Host '  Rufus: select the ISO, click START, and choose "Write in DD Image mode" when asked.' -ForegroundColor Green
     Write-Host '  On boot the "Automated Installation" entry starts by itself after a short countdown' -ForegroundColor Yellow
     Write-Host '  and WIPES the configured disks. Keep the stick away from machines you care about.' -ForegroundColor Yellow
+    if ($Headless) {
+        Write-Host '  Headless: when the machine powers itself off the install succeeded - remove the stick,' -ForegroundColor Green
+        Write-Host '  then power it on. Still on after ~15 min with no SSH/8006 = it stopped on an error.' -ForegroundColor Green
+    }
 } finally {
     if ($script:WorkDir -and (Test-Path -LiteralPath $script:WorkDir)) { Remove-Item -LiteralPath $script:WorkDir -Recurse -Force -ErrorAction SilentlyContinue }
 }
